@@ -1,0 +1,225 @@
+{
+  "server": {
+    "port": 3000
+  },
+  "ma2": {
+    "ip": "192.168.3.2",
+    "port": 30000,
+    "username": "administrator",
+    "password": "admin",
+    "reconnectIntervalMs": 5000
+  },
+  "resolume": {
+    "ip": "192.168.1.50",
+    "port": 8080,
+    "pollIntervalMs": 2000,
+    "djSources": {
+      "genericTrilogy": { "label": "Generic Trilogy", "layer": 1, "clip": 1 },
+      "customLogo":     { "label": "Custom Logo",     "layer": 1, "clip": 2 },
+      "mylesAway":      { "label": "Myles Away",      "layer": 1, "clip": 3 }
+    },
+    "brightnessLayer": 1
+  },
+  "cueStack": {
+    "page": 1,
+    "exec": 1
+  },
+  "cueBanks": {
+    "staticCues": {
+      "label": "Static Cues",
+      "cues": [
+        { "cue": 1,  "label": "Cue 1"  },
+        { "cue": 2,  "label": "Cue 2"  },
+        { "cue": 3,  "label": "Cue 3"  },
+        { "cue": 4,  "label": "Cue 4"  },
+        { "cue": 5,  "label": "Cue 5"  },
+        { "cue": 6,  "label": "Cue 6"  },
+        { "cue": 7,  "label": "Cue 7"  },
+        { "cue": 8,  "label": "Cue 8"  },
+        { "cue": 9,  "label": "Cue 9"  },
+        { "cue": 10, "label": "Cue 10" },
+        { "cue": 11, "label": "Cue 11" },
+        { "cue": 12, "label": "Cue 12" },
+        { "cue": 13, "label": "Cue 13" },
+        { "cue": 14, "label": "Cue 14" },
+        { "cue": 15, "label": "Cue 15" },
+        { "cue": 16, "label": "Cue 16" },
+        { "cue": 17, "label": "Cue 17" },
+        { "cue": 18, "label": "Cue 18" },
+        { "cue": 19, "label": "Cue 19" },
+        { "cue": 20, "label": "Cue 20" }
+      ]
+    },
+    "slowCues": {
+      "label": "Slow Cues",
+      "cues": [
+        { "cue": 21, "label": "Cue 21" },
+        { "cue": 22, "label": "Cue 22" },
+        { "cue": 23, "label": "Cue 23" },
+        { "cue": 24, "label": "Cue 24" },
+        { "cue": 25, "label": "Cue 25" },
+        { "cue": 26, "label": "Cue 26" },
+        { "cue": 27, "label": "Cue 27" },
+        { "cue": 28, "label": "Cue 28" },
+        { "cue": 29, "label": "Cue 29" },
+        { "cue": 30, "label": "Cue 30" },
+        { "cue": 31, "label": "Cue 31" },
+        { "cue": 32, "label": "Cue 32" },
+        { "cue": 33, "label": "Cue 33" },
+        { "cue": 34, "label": "Cue 34" },
+        { "cue": 35, "label": "Cue 35" },
+        { "cue": 36, "label": "Cue 36" },
+        { "cue": 37, "label": "Cue 37" },
+        { "cue": 38, "label": "Cue 38" },
+        { "cue": 39, "label": "Cue 39" },
+        { "cue": 40, "label": "Cue 40" }
+      ]
+    },
+    "mainCues": {
+      "label": "Main Cues",
+      "cues": [
+        { "cue": 41, "label": "Cue 41" },
+        { "cue": 42, "label": "Cue 42" },
+        { "cue": 43, "label": "Cue 43" },
+        { "cue": 44, "label": "Cue 44" },
+        { "cue": 45, "label": "Cue 45" },
+        { "cue": 46, "label": "Cue 46" },
+        { "cue": 47, "label": "Cue 47" },
+        { "cue": 48, "label": "Cue 48" },
+        { "cue": 49, "label": "Cue 49" },
+        { "cue": 50, "label": "Cue 50" },
+        { "cue": 51, "label": "Cue 51" },
+        { "cue": 52, "label": "Cue 52" },
+        { "cue": 53, "label": "Cue 53" },
+        { "cue": 54, "label": "Cue 54" },
+        { "cue": 55, "label": "Cue 55" },
+        { "cue": 56, "label": "Cue 56" },
+        { "cue": 57, "label": "Cue 57" },
+        { "cue": 58, "label": "Cue 58" },
+        { "cue": 59, "label": "Cue 59" },
+        { "cue": 60, "label": "Cue 60" }
+      ]
+    },
+    "strobingCues": {
+      "label": "Strobing Cues",
+      "cues": [
+        { "cue": 61, "label": "Cue 61" },
+        { "cue": 62, "label": "Cue 62" },
+        { "cue": 63, "label": "Cue 63" },
+        { "cue": 64, "label": "Cue 64" },
+        { "cue": 65, "label": "Cue 65" },
+        { "cue": 66, "label": "Cue 66" },
+        { "cue": 67, "label": "Cue 67" },
+        { "cue": 68, "label": "Cue 68" },
+        { "cue": 69, "label": "Cue 69" },
+        { "cue": 70, "label": "Cue 70" },
+        { "cue": 71, "label": "Cue 71" },
+        { "cue": 72, "label": "Cue 72" },
+        { "cue": 73, "label": "Cue 73" },
+        { "cue": 74, "label": "Cue 74" },
+        { "cue": 75, "label": "Cue 75" },
+        { "cue": 76, "label": "Cue 76" },
+        { "cue": 77, "label": "Cue 77" },
+        { "cue": 78, "label": "Cue 78" },
+        { "cue": 79, "label": "Cue 79" },
+        { "cue": 80, "label": "Cue 80" }
+      ]
+    },
+    "lasersSlow": {
+      "label": "Lasers Slow",
+      "cues": [
+        { "cue": 81,  "label": "Cue 81"  },
+        { "cue": 82,  "label": "Cue 82"  },
+        { "cue": 83,  "label": "Cue 83"  },
+        { "cue": 84,  "label": "Cue 84"  },
+        { "cue": 85,  "label": "Cue 85"  },
+        { "cue": 86,  "label": "Cue 86"  },
+        { "cue": 87,  "label": "Cue 87"  },
+        { "cue": 88,  "label": "Cue 88"  },
+        { "cue": 89,  "label": "Cue 89"  },
+        { "cue": 90,  "label": "Cue 90"  },
+        { "cue": 91,  "label": "Cue 91"  },
+        { "cue": 92,  "label": "Cue 92"  },
+        { "cue": 93,  "label": "Cue 93"  },
+        { "cue": 94,  "label": "Cue 94"  },
+        { "cue": 95,  "label": "Cue 95"  },
+        { "cue": 96,  "label": "Cue 96"  },
+        { "cue": 97,  "label": "Cue 97"  },
+        { "cue": 98,  "label": "Cue 98"  },
+        { "cue": 99,  "label": "Cue 99"  },
+        { "cue": 100, "label": "Cue 100" }
+      ]
+    },
+    "lasersDrop": {
+      "label": "Lasers Drop",
+      "cues": [
+        { "cue": 101, "label": "Cue 101" },
+        { "cue": 102, "label": "Cue 102" },
+        { "cue": 103, "label": "Cue 103" },
+        { "cue": 104, "label": "Cue 104" },
+        { "cue": 105, "label": "Cue 105" },
+        { "cue": 106, "label": "Cue 106" },
+        { "cue": 107, "label": "Cue 107" },
+        { "cue": 108, "label": "Cue 108" },
+        { "cue": 109, "label": "Cue 109" },
+        { "cue": 110, "label": "Cue 110" },
+        { "cue": 111, "label": "Cue 111" },
+        { "cue": 112, "label": "Cue 112" },
+        { "cue": 113, "label": "Cue 113" },
+        { "cue": 114, "label": "Cue 114" },
+        { "cue": 115, "label": "Cue 115" },
+        { "cue": 116, "label": "Cue 116" },
+        { "cue": 117, "label": "Cue 117" },
+        { "cue": 118, "label": "Cue 118" },
+        { "cue": 119, "label": "Cue 119" },
+        { "cue": 120, "label": "Cue 120" }
+      ]
+    },
+    "buildups": {
+      "label": "Buildups",
+      "cues": [
+        { "cue": 121, "label": "Cue 121" },
+        { "cue": 122, "label": "Cue 122" },
+        { "cue": 123, "label": "Cue 123" },
+        { "cue": 124, "label": "Cue 124" },
+        { "cue": 125, "label": "Cue 125" },
+        { "cue": 126, "label": "Cue 126" },
+        { "cue": 127, "label": "Cue 127" },
+        { "cue": 128, "label": "Cue 128" },
+        { "cue": 129, "label": "Cue 129" },
+        { "cue": 130, "label": "Cue 130" },
+        { "cue": 131, "label": "Cue 131" },
+        { "cue": 132, "label": "Cue 132" },
+        { "cue": 133, "label": "Cue 133" },
+        { "cue": 134, "label": "Cue 134" },
+        { "cue": 135, "label": "Cue 135" },
+        { "cue": 136, "label": "Cue 136" },
+        { "cue": 137, "label": "Cue 137" },
+        { "cue": 138, "label": "Cue 138" },
+        { "cue": 139, "label": "Cue 139" },
+        { "cue": 140, "label": "Cue 140" }
+      ]
+    }
+  },
+  "executors": {
+    "haze":       { "page": 1, "exec": 2 },
+    "endOfNight": { "page": 1, "exec": 3 },
+    "confetti": [
+      { "id": "leftFront",  "label": "Left 1",  "side": "left",  "page": 1, "exec": 4 },
+      { "id": "leftBack",   "label": "Left 2",  "side": "left",  "page": 1, "exec": 5 },
+      { "id": "rightFront", "label": "Right 1", "side": "right", "page": 1, "exec": 6 },
+      { "id": "rightBack",  "label": "Right 2", "side": "right", "page": 1, "exec": 7 }
+    ],
+    "disables": {
+      "beams":     { "label": "Beams",      "page": 1, "exec": 10 },
+      "spots":     { "label": "Spots",      "page": 1, "exec": 11 },
+      "blitzers":  { "label": "Blitzers",   "page": 1, "exec": 12 },
+      "washes":    { "label": "Washes",     "page": 1, "exec": 13 },
+      "lasers":    { "label": "Lasers",     "page": 1, "exec": 14 },
+      "laserBars": { "label": "Laser Bars", "page": 1, "exec": 15 }
+    }
+  },
+  "defaults": {
+    "fadeTime": 0.5
+  }
+}
