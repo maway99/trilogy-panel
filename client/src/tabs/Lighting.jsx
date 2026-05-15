@@ -31,14 +31,12 @@ export default function Lighting({ state, send }) {
         </section>
 
         <section className="flex-[2] panel p-3 flex flex-col">
-          <SectionHeader title="Blackout" />
+          <SectionHeader title="Clear" />
           <button
-            onClick={() => send({ type: 'blackout', active: !state.blackoutActive })}
-            className={`btn flex-1 w-full text-[12px] font-semibold tracking-wider leading-tight ${
-              state.blackoutActive ? 'btn-warn' : 'btn-default'
-            }`}
+            onClick={() => send({ type: 'clear' })}
+            className="btn flex-1 w-full text-[12px] font-semibold tracking-wider leading-tight btn-default"
           >
-            {state.blackoutActive ? 'BLACKOUT ACTIVE' : 'BLACKOUT'}
+            CLEAR
           </button>
         </section>
 
@@ -173,13 +171,14 @@ function GroupDivider() {
 
 function BankColumn({ bankKey, bank, activeCue, onSelect }) {
   const isStrobe = bankKey === 'strobingCues';
-  const visible = bank.cues.slice(0, VISIBLE_CUES_PER_BANK);
+  const filtered = bank.cues.filter((c) => c.label !== `Cue ${c.cue}`);
+  const visible = filtered.slice(0, VISIBLE_CUES_PER_BANK);
   return (
     <div className="flex-1 flex flex-col min-h-0 min-w-0">
       <div className="section-header mb-2 text-center truncate">{bank.label}</div>
       <div
         className="grid gap-1 flex-1 min-h-0"
-        style={{ gridTemplateRows: `repeat(${visible.length}, minmax(0, 1fr))` }}
+        style={{ gridTemplateRows: `repeat(${VISIBLE_CUES_PER_BANK}, minmax(0, 1fr))` }}
       >
         {visible.map((c) => {
           const isActive = activeCue === c.cue;

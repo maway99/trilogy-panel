@@ -19,7 +19,6 @@ const state = {
   haze: 0,
   fadeTime: config.defaults.fadeTime,
   endOfNightActive: false,
-  blackoutActive: false,
   activeCue: null,
   confetti: Object.fromEntries(config.executors.confetti.map(c => [c.id, false])),
   disables: Object.fromEntries(Object.keys(config.executors.disables).map(k => [k, false])),
@@ -36,7 +35,6 @@ const state = {
 function resetLightingNeutral() {
   state.haze = 0;
   state.endOfNightActive = false;
-  state.blackoutActive = false;
   state.activeCue = null;
   state.confetti = Object.fromEntries(config.executors.confetti.map(c => [c.id, false]));
   for (const k of Object.keys(state.disables)) state.disables[k] = false;
@@ -263,7 +261,7 @@ function setHaze(value) {
   const v = Math.max(0, Math.min(100, Math.round(value)));
   state.haze = v;
   const { page, exec } = config.executors.haze;
-  ma2.send(`Fader Exec ${page}.${exec} At ${v}`);
+  ma2.send(`Fader ${page}.${exec} At ${v}`);
   broadcastState();
 }
 
@@ -287,11 +285,10 @@ function selectCue(cueNumber) {
   broadcastState();
 }
 
-function setBlackout(active) {
-  state.blackoutActive = !!active;
-  const { page, exec } = config.cueStack;
-  // Drive cue-stack master fader: 0% blacks the rig out, 100% restores.
-  ma2.send(`Master Page ${page}.${exec} At ${active ? 0 : 100}`);
+function setClear() {
+  const { page } = config.cueStack;
+  ma2.send(`Off Fader ${page}`);
+  state.activeCue = null;
   broadcastState();
 }
 
@@ -401,7 +398,7 @@ wss.on('connection', (ws) => {
       case 'fadeTime':        return setFadeTime(msg.value);
       case 'cue':             return selectCue(msg.cueNumber);
       case 'endOfNight':      return setEndOfNight(msg.active);
-      case 'blackout':        return setBlackout(msg.active);
+      case 'clear':           return setClear();
       case 'confetti':        return fireConfetti(msg.cannon);
       case 'confettiReset':   return resetConfetti();
       case 'disable':         return setDisable(msg.target, msg.active);

@@ -28,8 +28,8 @@
     "staticCues": {
       "label": "Static Cues",
       "cues": [
-        { "cue": 1,  "label": "Cue 1"  },
-        { "cue": 2,  "label": "Cue 2"  },
+        { "cue": 1,  "label": "All White"  },
+        { "cue": 2,  "label": "All Red"  },
         { "cue": 3,  "label": "Cue 3"  },
         { "cue": 4,  "label": "Cue 4"  },
         { "cue": 5,  "label": "Cue 5"  },
@@ -53,9 +53,9 @@
     "slowCues": {
       "label": "Slow Cues",
       "cues": [
-        { "cue": 21, "label": "Cue 21" },
-        { "cue": 22, "label": "Cue 22" },
-        { "cue": 23, "label": "Cue 23" },
+        { "cue": 21, "label": "Slow Reds Fade" },
+        { "cue": 22, "label": "Slow Blues Fade" },
+        { "cue": 23, "label": "Slow Cyans Fade" },
         { "cue": 24, "label": "Cue 24" },
         { "cue": 25, "label": "Cue 25" },
         { "cue": 26, "label": "Cue 26" },
@@ -79,14 +79,14 @@
       "label": "Main Cues",
       "cues": [
         { "cue": 41, "label": "Cue 41" },
-        { "cue": 42, "label": "Cue 42" },
-        { "cue": 43, "label": "Cue 43" },
-        { "cue": 44, "label": "Cue 44" },
-        { "cue": 45, "label": "Cue 45" },
-        { "cue": 46, "label": "Cue 46" },
-        { "cue": 47, "label": "Cue 47" },
-        { "cue": 48, "label": "Cue 48" },
-        { "cue": 49, "label": "Cue 49" },
+        { "cue": 42, "label": "Reds Fly Up" },
+        { "cue": 43, "label": "Blue Fly Up" },
+        { "cue": 44, "label": "Blues/Reds Fade" },
+        { "cue": 45, "label": "Red/White Fade" },
+        { "cue": 46, "label": "White/Red Chase" },
+        { "cue": 47, "label": "Green/Red Snaps" },
+        { "cue": 48, "label": "Cyans Snaps" },
+        { "cue": 49, "label": "Blue/Purple Snaps" },
         { "cue": 50, "label": "Cue 50" },
         { "cue": 51, "label": "Cue 51" },
         { "cue": 52, "label": "Cue 52" },
@@ -103,8 +103,8 @@
     "strobingCues": {
       "label": "Strobing Cues",
       "cues": [
-        { "cue": 61, "label": "Cue 61" },
-        { "cue": 62, "label": "Cue 62" },
+        { "cue": 61, "label": "White Strobe" },
+        { "cue": 62, "label": "White Strobe Fly Up" },
         { "cue": 63, "label": "Cue 63" },
         { "cue": 64, "label": "Cue 64" },
         { "cue": 65, "label": "Cue 65" },
@@ -178,8 +178,8 @@
     "buildups": {
       "label": "Buildups",
       "cues": [
-        { "cue": 121, "label": "Cue 121" },
-        { "cue": 122, "label": "Cue 122" },
+        { "cue": 121, "label": "White Buildup Medium" },
+        { "cue": 122, "label": "White Buildup Fast" },
         { "cue": 123, "label": "Cue 123" },
         { "cue": 124, "label": "Cue 124" },
         { "cue": 125, "label": "Cue 125" },
@@ -202,12 +202,12 @@
     }
   },
   "executors": {
-    "haze":       { "page": 1, "exec": 2 },
+    "haze":       { "page": 1, "exec": 6 },
     "endOfNight": { "page": 1, "exec": 3 },
     "confetti": [
       { "id": "leftFront",  "label": "Left 1",  "side": "left",  "page": 1, "exec": 4 },
       { "id": "leftBack",   "label": "Left 2",  "side": "left",  "page": 1, "exec": 5 },
-      { "id": "rightFront", "label": "Right 1", "side": "right", "page": 1, "exec": 6 },
+      { "id": "rightFront", "label": "Right 1", "side": "right", "page": 1, "exec": 8 },
       { "id": "rightBack",  "label": "Right 2", "side": "right", "page": 1, "exec": 7 }
     ],
     "disables": {
