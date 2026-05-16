@@ -115,7 +115,19 @@ class Ma2Telnet {
       state.ma2LastResponse = this.buffer.slice(-200);
       const lower = this.buffer.toLowerCase();
 
-      if (this.loggedIn) return;
+      if (this.loggedIn) {
+        // Parse command responses for state sync
+        if (this.buffer.includes('ListVar') || this.buffer.includes('listvar')) {
+          // Parse when we have ListVar responses
+          parseMa2InfoResponse(this.buffer);
+          // Clear buffer more aggressively to prevent accumulation
+          this.buffer = '';
+        } else if (this.buffer.length > 1000) {
+          // Keep buffer manageable even without relevant responses
+          this.buffer = this.buffer.slice(-300);
+        }
+        return;
+      }
 
       if (!this._loginSent) {
         // First prompt seen → send Login immediately, don't wait for fallback.
@@ -135,6 +147,9 @@ class Ma2Telnet {
         state.ma2 = 'connected';
         state.ma2DisconnectedAt = null;
         console.log('[MA2] Logged in as', config.ma2.username);
+        // Immediate state sync on connection (includes haze fader value)
+        setTimeout(() => pollMa2StateOnce(), 500);
+        startMa2Polling(); // Start periodic polling for active cue
         broadcastState();
         while (this.queue.length) sock.write(this.queue.shift());
       } else if (lower.includes('login failed') || lower.includes('wrong password') ||
@@ -156,6 +171,7 @@ class Ma2Telnet {
       this.loggedIn = false;
       this._loginSent = false;
       if (this._loginFallback) { clearTimeout(this._loginFallback); this._loginFallback = null; }
+      stopMa2Polling(); // Stop state polling
       if (wasConnected) {
         state.ma2 = 'disconnected';
         state.ma2DisconnectedAt = Date.now();
@@ -263,6 +279,82 @@ function startResolumePolling() {
   resolumeTimer = setInterval(pollResolume, config.resolume.pollIntervalMs);
 }
 
+// ---------- MA2 State Polling ----------
+let ma2PollTimer = null;
+let ma2PendingQueries = new Map(); // command -> handler function
+
+function pollMa2State() {
+  if (state.ma2 !== 'connected') return;
+  
+  // Query the selected/active cue using MA2 variable
+  ma2.send('ListVar $SELECTEDEXECCUE');
+  
+  // Note: End of Night polling disabled - executor 1.3 doesn't exist in MA2
+}
+
+function pollMa2StateOnce() {
+  if (state.ma2 !== 'connected') return;
+  
+  // One-time queries on connection/reconnect
+  ma2.send('ListVar $SELECTEDEXECCUE');
+  
+  // Reset haze fader to 0 on startup/reconnect
+  const { page, exec } = config.executors.haze;
+  ma2.send(`Fader ${page}.${exec} At 0`);
+  state.haze = 0;
+  broadcastState();
+}
+
+function parseMa2InfoResponse(response) {
+  // Strip ANSI color codes for easier parsing
+  const cleanResponse = response.replace(/\[\d+m/g, '');
+  
+  // Parse SELECTEDEXECCUE variable - MA2 responds with "ListVar <number>"
+  // Find ALL matches and take the LAST one (most recent)
+  const allMatches = cleanResponse.matchAll(/ListVar\s+(\d+)/gi);
+  const matches = [...allMatches];
+  if (matches.length > 0) {
+    const lastMatch = matches[matches.length - 1];
+    const cueNum = parseInt(lastMatch[1]);
+    
+    if (cueNum > 0 && cueNum !== state.activeCue) {
+      state.activeCue = cueNum;
+      // Track End of Night state based on cue 141
+      const newEotnState = (cueNum === 141);
+      if (newEotnState !== state.endOfNightActive) {
+        state.endOfNightActive = newEotnState;
+        console.log('[MA2 Sync] End of Night state updated:', newEotnState);
+      }
+      console.log('[MA2 Sync] Active cue updated:', cueNum);
+      broadcastState();
+    } else if (cueNum === 0 && state.activeCue !== null) {
+      state.activeCue = null;
+      // If cue is cleared, End of Night is also off
+      if (state.endOfNightActive) {
+        state.endOfNightActive = false;
+        console.log('[MA2 Sync] End of Night cleared');
+      }
+      console.log('[MA2 Sync] Active cue cleared');
+      broadcastState();
+    }
+  }
+}
+
+function startMa2Polling() {
+  if (ma2PollTimer) return;
+  // Poll every 10 seconds
+  ma2PollTimer = setInterval(() => {
+    pollMa2State();
+  }, 10000);
+}
+
+function stopMa2Polling() {
+  if (ma2PollTimer) {
+    clearInterval(ma2PollTimer);
+    ma2PollTimer = null;
+  }
+}
+
 // ---------- Command handlers (panel actions → MA2 / Resolume) ----------
 function setHaze(value) {
   const v = Math.max(0, Math.min(100, Math.round(value)));
@@ -301,9 +393,19 @@ function selectCue(cueNumber) {
 }
 
 function setClear() {
-  const { page } = config.cueStack;
+  const { page, exec } = config.cueStack;
   ma2.send(`Off Fader ${page}`);
+  ma2.send(`Off Exec ${page}.${exec}`);
   state.activeCue = null;
+  
+  // Also turn off End of Night if active
+  if (state.endOfNightActive) {
+    const { page: eotnPage, exec: eotnExec } = config.executors.endOfNight;
+    ma2.send(`Off Exec ${eotnPage}.${eotnExec}`);
+    state.endOfNightActive = false;
+    setResolumeEndOfNightLayer(false);
+  }
+  
   broadcastState();
 }
 
@@ -317,8 +419,16 @@ function setEndOfNight(active) {
     // confetti tracking so reload state is fresh for next night.
     const cs = config.cueStack;
     ma2.send(`Off Exec ${cs.page}.${cs.exec}`);
-    state.activeCue = null;
+    // Activate cue 141 (End of Night cue) with 1s fade
+    ma2.send(`Goto Cue 141 Exec ${cs.page}.${cs.exec} Fade 1`);
+    state.activeCue = 141;
     state.confetti = Object.fromEntries(config.executors.confetti.map(c => [c.id, false]));
+  } else {
+    // When manually deactivating EOTN, clear cues
+    const cs = config.cueStack;
+    ma2.send(`Off Fader ${cs.page}`);
+    ma2.send(`Off Exec ${cs.page}.${cs.exec}`);
+    state.activeCue = null;
   }
 
   setResolumeEndOfNightLayer(active);
