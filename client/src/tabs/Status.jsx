@@ -170,7 +170,10 @@ function Row({ label, value, mono = false }) {
   return (
     <div className="flex items-baseline justify-between py-1.5 border-b border-border/30 last:border-0">
       <div className="text-muted text-[12px] tracking-wider uppercase">{label}</div>
-      <div className={`text-white text-[14px] ${mono ? 'font-mono text-[12px]' : ''} text-right truncate ml-4`}>
+      <div
+        className={`text-white text-[14px] ${mono ? 'font-mono text-[12px]' : ''} text-right ml-4 tabular-nums`}
+        title={String(value)}
+      >
         {String(value)}
       </div>
     </div>

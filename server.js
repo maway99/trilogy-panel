@@ -370,6 +370,16 @@ function setFadeTime(value) {
   broadcastState();
 }
 
+const ZERO_FADE_CUE_BANKS = ['lasersSlow', 'lasersDrop', 'buildups'];
+
+function cueUsesZeroFade(cueNumber) {
+  for (const key of ZERO_FADE_CUE_BANKS) {
+    const bank = config.cueBanks[key];
+    if (bank?.cues.some((c) => c.cue === cueNumber)) return true;
+  }
+  return false;
+}
+
 function setResolumeEndOfNightLayer(active) {
   if (!config.resolume.endOfNightLayer) return;
   resolumeRequest('PUT', `/composition/layers/${config.resolume.endOfNightLayer}`, {
@@ -387,8 +397,9 @@ function selectCue(cueNumber) {
     setResolumeEndOfNightLayer(false);
   }
   const { page, exec } = config.cueStack;
+  const fade = cueUsesZeroFade(cueNumber) ? 0 : state.fadeTime;
   // Single line: 'Fade' as a suffix on Goto. MA2 errors on standalone 'Fade N'.
-  ma2.send(`Goto Cue ${cueNumber} Exec ${page}.${exec} Fade ${state.fadeTime}`);
+  ma2.send(`Goto Cue ${cueNumber} Exec ${page}.${exec} Fade ${fade}`);
   broadcastState();
 }
 

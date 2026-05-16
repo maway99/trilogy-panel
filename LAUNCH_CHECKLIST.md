@@ -19,7 +19,7 @@ Run through this **on-site, on the actual lighting PC, with the MA2 show file fi
 
 - [ ] Project copied to a permanent path (e.g. `C:\trilogy-panel\`)
 - [ ] `config.json` reviewed end-to-end — every executor number cross-checked against the show file
-- [ ] `setup.ps1` run from elevated PowerShell, no errors
+- [ ] `setup.bat` run as Administrator (not `setup.ps1` directly), no errors
 - [ ] `pm2 status` shows `trilogy-panel` as `online`
 - [ ] `http://localhost:3000` loads — Status tab shows green dots for MA2 and Resolume
 
