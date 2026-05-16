@@ -62,7 +62,7 @@ function snapshotState() {
       cueBanks: config.cueBanks,
       cueStack: config.cueStack,
       executors: config.executors,
-      djSources: config.resolume.djSources,
+      videoSources: config.resolume.videoSources,
       defaults: config.defaults
     }
   };
@@ -223,16 +223,23 @@ async function pollResolume() {
     if (res.ok) {
       if (state.resolume !== 'connected') {
         state.resolume = 'connected';
-        // one-time brightness sync on (re)connect
         try {
-          const r = await resolumeRequest('GET', '/composition');
-          if (r.ok) {
-            const data = await r.json();
-            const opacity = data?.master?.value ?? data?.master ?? null;
-            if (typeof opacity === 'number') {
-              state.brightness = Math.round(opacity * 100);
+          const [compRes, ...layerResponses] = await Promise.all([
+            resolumeRequest('GET', '/composition'),
+            ...Object.entries(config.resolume.videoSources).map(([id, s]) =>
+              resolumeRequest('GET', `/composition/layers/${s.layer}`).then(r => r.ok ? r.json() : null).then(d => ({ id, value: d?.master?.value ?? 0 }))
+            )
+          ]);
+          if (compRes.ok) {
+            const data = await compRes.json();
+            if (typeof data?.master?.value === 'number') {
+              state.brightness = Math.round(data.master.value * 100);
             }
           }
+          const active = layerResponses.find(l => l.value > 0.5);
+          state.djSource = active ? active.id : null;
+
+          setResolumeEndOfNightLayer(state.endOfNightActive);
         } catch {}
         broadcastState();
       }
@@ -271,6 +278,13 @@ function setFadeTime(value) {
   broadcastState();
 }
 
+function setResolumeEndOfNightLayer(active) {
+  if (!config.resolume.endOfNightLayer) return;
+  resolumeRequest('PUT', `/composition/layers/${config.resolume.endOfNightLayer}`, {
+    master: { value: active ? 1.0 : 0.0 }
+  }).catch(err => console.warn('[Resolume] End of Night layer failed:', err.message));
+}
+
 function selectCue(cueNumber) {
   state.activeCue = cueNumber;
   // If End of Night was active, firing a cue should release it.
@@ -278,6 +292,7 @@ function selectCue(cueNumber) {
     const eotn = config.executors.endOfNight;
     ma2.send(`Off Exec ${eotn.page}.${eotn.exec}`);
     state.endOfNightActive = false;
+    setResolumeEndOfNightLayer(false);
   }
   const { page, exec } = config.cueStack;
   // Single line: 'Fade' as a suffix on Goto. MA2 errors on standalone 'Fade N'.
@@ -306,6 +321,8 @@ function setEndOfNight(active) {
     state.confetti = Object.fromEntries(config.executors.confetti.map(c => [c.id, false]));
   }
 
+  setResolumeEndOfNightLayer(active);
+
   broadcastState();
 }
 
@@ -332,14 +349,18 @@ function setDisable(target, active) {
 }
 
 async function setDjSource(sourceId) {
-  const src = config.resolume.djSources[sourceId];
-  if (!src) return;
+  const sources = config.resolume.videoSources;
+  if (!sources[sourceId]) return;
   state.djSource = sourceId;
   broadcastState();
   try {
-    await resolumeRequest('POST', `/composition/layers/${src.layer}/clips/${src.clip}/connect`);
+    await Promise.all(
+      Object.entries(sources).map(([id, s]) =>
+        resolumeRequest('PUT', `/composition/layers/${s.layer}`, { master: { value: id === sourceId ? 1.0 : 0.0 } })
+      )
+    );
   } catch (err) {
-    console.warn('[Resolume] DJ source failed:', err.message);
+    console.warn('[Resolume] Video source switch failed:', err.message);
   }
 }
 
@@ -348,7 +369,7 @@ async function setBrightness(value) {
   state.brightness = v;
   broadcastState();
   try {
-    await resolumeRequest('PUT', '/composition/master', { value: v / 100 });
+    await resolumeRequest('PUT', '/composition', { master: { value: v / 100 } });
   } catch (err) {
     console.warn('[Resolume] Brightness failed:', err.message);
   }

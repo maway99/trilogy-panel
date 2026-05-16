@@ -10,15 +10,15 @@
     "reconnectIntervalMs": 5000
   },
   "resolume": {
-    "ip": "192.168.1.50",
+    "ip": "192.168.3.6",
     "port": 8080,
     "pollIntervalMs": 2000,
-    "djSources": {
-      "genericTrilogy": { "label": "Generic Trilogy", "layer": 1, "clip": 1 },
-      "customLogo":     { "label": "Custom Logo",     "layer": 1, "clip": 2 },
-      "mylesAway":      { "label": "Myles Away",      "layer": 1, "clip": 3 }
+    "videoSources": {
+      "mylesAway":     { "label": "Myles Away",     "layer": 1 },
+      "trilogyOnly":   { "label": "Trilogy Only",   "layer": 2 },
+      "customContent": { "label": "Custom Content", "layer": 3 }
     },
-    "brightnessLayer": 1
+    "endOfNightLayer": 4
   },
   "cueStack": {
     "page": 1,

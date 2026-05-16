@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 const CUE_GROUPS = [
   ['staticCues', 'slowCues', 'mainCues', 'strobingCues'],
@@ -6,24 +6,90 @@ const CUE_GROUPS = [
   ['buildups']
 ];
 
+const AUTO_BANKS = new Set(['slowCues', 'mainCues', 'strobingCues']);
+const AUTO_INTERVAL_MS = 15000;
+
 const TOP_ROW_HEIGHT = 120;
 const CONFETTI_WIDTH = 240;
-// How many cues are rendered per bank on the panel. Each bank can hold more
-// in config; only the first VISIBLE_CUES_PER_BANK are displayed to keep the
-// touch targets a comfortable size.
 const VISIBLE_CUES_PER_BANK = 15;
 
+function pickRandom(cues, exclude) {
+  const pool = exclude != null ? cues.filter(c => c.cue !== exclude) : cues;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 export default function Lighting({ state, send }) {
+  const [autoBank, setAutoBank] = useState(null);
+  const [autoNextCue, setAutoNextCue] = useState(null);
+  const autoTimerRef = useRef(null);
+  const autoRef = useRef({ nextCue: null, cues: [] });
+
+  const stopAuto = useCallback(() => {
+    clearTimeout(autoTimerRef.current);
+    setAutoBank(null);
+    setAutoNextCue(null);
+  }, []);
+
+  const tick = useCallback(() => {
+    const { nextCue, cues } = autoRef.current;
+    send({ type: 'cue', cueNumber: nextCue });
+    const newNext = pickRandom(cues, nextCue);
+    autoRef.current.nextCue = newNext.cue;
+    setAutoNextCue(newNext.cue);
+    autoTimerRef.current = setTimeout(tick, AUTO_INTERVAL_MS);
+  }, [send]);
+
+  const toggleAuto = useCallback((bankKey, cues) => {
+    if (autoBank === bankKey) { stopAuto(); return; }
+    clearTimeout(autoTimerRef.current);
+    const first = pickRandom(cues, null);
+    send({ type: 'cue', cueNumber: first.cue });
+    const next = pickRandom(cues, first.cue);
+    autoRef.current = { nextCue: next.cue, cues };
+    setAutoBank(bankKey);
+    setAutoNextCue(next.cue);
+    autoTimerRef.current = setTimeout(tick, AUTO_INTERVAL_MS);
+  }, [autoBank, send, stopAuto, tick]);
+
+  const handleSelectCue = useCallback((cueNumber) => {
+    if (autoBank) stopAuto();
+    send({ type: 'cue', cueNumber });
+  }, [autoBank, send, stopAuto]);
+
+  useEffect(() => () => clearTimeout(autoTimerRef.current), []);
+
   return (
     <div className="h-full flex flex-col gap-5">
       <div className="flex gap-5" style={{ height: TOP_ROW_HEIGHT, flex: '0 0 auto' }}>
-        <section className="flex-[5] panel p-3 flex flex-col">
+        <section className="flex-[4] panel p-3 flex flex-col">
           <SectionHeader title="Haze" right={`${state.haze}%`} />
           <HazeSlider value={state.haze} onCommit={(v) => send({ type: 'haze', value: v })} />
         </section>
 
         <section className="flex-[3] panel p-3 flex flex-col">
-          <SectionHeader title="Fade Time" right={`${state.fadeTime.toFixed(1)}s`} />
+          <SectionHeader title="Auto" />
+          <div className="flex-1 grid grid-cols-3 gap-2">
+            {['slowCues', 'mainCues', 'strobingCues'].map(key => {
+              const bank = state.config.cueBanks[key];
+              if (!bank) return null;
+              const visible = bank.cues.filter(c => c.label !== `Cue ${c.cue}`).slice(0, VISIBLE_CUES_PER_BANK);
+              const isActive = autoBank === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleAuto(key, visible)}
+                  className={`btn text-[11px] font-semibold tracking-[0.1em] ${isActive ? 'btn-warn' : 'btn-default'}`}
+                  style={{ minHeight: 0 }}
+                >
+                  {bank.label.replace(' Cues', '').toUpperCase()}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="flex-[3] panel p-3 flex flex-col">
+          <SectionHeader title="Fade Time" />
           <FadeTimePresets
             value={state.fadeTime}
             onChange={(v) => send({ type: 'fadeTime', value: v })}
@@ -55,11 +121,12 @@ export default function Lighting({ state, send }) {
 
       <div className="flex-1 flex gap-5 min-h-0">
         <section className="flex-1 panel p-5 flex flex-col overflow-hidden min-w-0">
-          <SectionHeader title="Cue Banks" right={state.activeCue ? `Active · Cue ${state.activeCue}` : null} />
           <CueBanks
             banks={state.config.cueBanks}
             activeCue={state.activeCue}
-            onSelect={(cue) => send({ type: 'cue', cueNumber: cue })}
+            onSelect={handleSelectCue}
+            autoBank={autoBank}
+            autoNextCue={autoNextCue}
           />
         </section>
 
@@ -131,7 +198,7 @@ function FadeTimePresets({ value, onChange }) {
   );
 }
 
-function CueBanks({ banks, activeCue, onSelect }) {
+function CueBanks({ banks, activeCue, onSelect, autoBank, autoNextCue }) {
   return (
     <div className="flex-1 flex items-stretch min-h-0">
       {CUE_GROUPS.map((keys, gi) => (
@@ -151,6 +218,7 @@ function CueBanks({ banks, activeCue, onSelect }) {
                   bank={bank}
                   activeCue={activeCue}
                   onSelect={onSelect}
+                  autoNextCue={autoBank === key ? autoNextCue : null}
                 />
               );
             })}
@@ -169,7 +237,7 @@ function GroupDivider() {
   );
 }
 
-function BankColumn({ bankKey, bank, activeCue, onSelect }) {
+function BankColumn({ bankKey, bank, activeCue, onSelect, autoNextCue }) {
   const isStrobe = bankKey === 'strobingCues';
   const filtered = bank.cues.filter((c) => c.label !== `Cue ${c.cue}`);
   const visible = filtered.slice(0, VISIBLE_CUES_PER_BANK);
@@ -182,6 +250,7 @@ function BankColumn({ bankKey, bank, activeCue, onSelect }) {
       >
         {visible.map((c) => {
           const isActive = activeCue === c.cue;
+          const isNext = autoNextCue === c.cue;
           return (
             <button
               key={c.cue}
@@ -189,6 +258,8 @@ function BankColumn({ bankKey, bank, activeCue, onSelect }) {
               className={`btn relative text-[13px] font-medium overflow-hidden flex items-center justify-center px-2 ${
                 isActive
                   ? `btn-active ${isStrobe ? 'border-2 border-amber' : ''}`
+                  : isNext
+                  ? 'btn-default border border-amber/50'
                   : 'btn-default'
               }`}
               style={{ minHeight: 0 }}

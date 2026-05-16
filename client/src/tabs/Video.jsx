@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 
 export default function Video({ state, send }) {
   const offline = state.resolume !== 'connected';
-  const sources = state.config.djSources;
+  const sources = state.config.videoSources;
 
   return (
     <div className="h-full grid grid-cols-12 grid-rows-12 gap-6 relative">
       <section className="col-span-12 row-span-7 panel p-6 flex flex-col">
         <div className="flex items-center justify-between mb-4">
-          <div className="section-header">DJ Source</div>
+          <div className="section-header">Video Source</div>
           <div className="text-[11px] text-muted tracking-wider">
             RESOLUME · {state.config.resolume.ip}:{state.config.resolume.port}
           </div>
@@ -21,11 +21,10 @@ export default function Video({ state, send }) {
                 key={id}
                 disabled={offline}
                 onClick={() => send({ type: 'djSource', source: id })}
-                className={`btn ${isActive ? 'btn-active' : 'btn-default'} text-[18px] font-semibold tracking-wide flex flex-col items-center justify-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed`}
+                className={`btn ${isActive ? 'btn-active' : 'btn-default'} text-[18px] font-semibold tracking-wide flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed`}
                 style={{ minHeight: '100%' }}
               >
-                <span>{src.label}</span>
-                <span className="text-[11px] opacity-60 tracking-widest">L{src.layer} · CLIP {src.clip}</span>
+                {src.label}
               </button>
             );
           })}

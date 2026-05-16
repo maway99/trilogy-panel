@@ -1,16 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const TABS = [
   { id: 'lighting', label: 'Lighting' },
   { id: 'video',    label: 'Video' },
-  { id: 'disables', label: 'Disables' },
-  { id: 'status',   label: 'Status' }
 ];
 
-export default function Sidebar({ active, onChange, state, wsConnected }) {
+export default function Sidebar({ active, onChange, state }) {
   const ma2Connected = state?.ma2 === 'connected';
   const resolumeConnected = state?.resolume === 'connected';
-  const disableCount = state?.disables ? Object.values(state.disables).filter(Boolean).length : 0;
 
   return (
     <aside className="w-[200px] h-full flex flex-col bg-bg border-r border-border/40 px-5 py-6">
@@ -27,7 +24,6 @@ export default function Sidebar({ active, onChange, state, wsConnected }) {
       <nav className="flex flex-col gap-2 flex-1">
         {TABS.map(t => {
           const isActive = active === t.id;
-          const showBadge = t.id === 'disables' && disableCount > 0;
           return (
             <button
               key={t.id}
@@ -39,31 +35,51 @@ export default function Sidebar({ active, onChange, state, wsConnected }) {
               }`}
             >
               {t.label}
-              {showBadge && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-amber text-white text-[11px] font-semibold rounded-full w-6 h-6 flex items-center justify-center">
-                  {disableCount}
-                </span>
-              )}
             </button>
           );
         })}
       </nav>
 
       <div className="mt-6 space-y-2 text-[12px]">
-        <StatusRow label="MA2" connected={ma2Connected} pulse={!ma2Connected} />
-        <StatusRow label="RESOLUME" connected={resolumeConnected} />
-        <StatusRow label="PANEL" connected={wsConnected} info />
+        <StatusRow label="MA2" connected={ma2Connected} pulse={!ma2Connected} active={active === 'status'} onClick={() => onChange(active === 'status' ? 'lighting' : 'status')} />
+        <StatusRow label="RESOLUME" connected={resolumeConnected} active={active === 'status'} onClick={() => onChange(active === 'status' ? 'lighting' : 'status')} />
       </div>
+
+      <Clock />
     </aside>
   );
 }
 
-function StatusRow({ label, connected, pulse, info }) {
-  const color = info ? 'bg-info' : connected ? 'bg-ok' : 'bg-bad';
+function Clock() {
+  const [time, setTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const tick = () => setTime(new Date());
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const hh = String(time.getHours()).padStart(2, '0');
+  const mm = String(time.getMinutes()).padStart(2, '0');
+  const ss = String(time.getSeconds()).padStart(2, '0');
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="mt-6 text-center tabular-nums tracking-widest text-white select-none pb-1">
+      <span className="text-[28px] font-semibold">{hh}:{mm}</span>
+      <span className="text-[18px] text-muted ml-1">{ss}</span>
+    </div>
+  );
+}
+
+function StatusRow({ label, connected, pulse, active, onClick }) {
+  const color = connected ? 'bg-ok' : 'bg-bad';
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 w-full rounded px-1 py-0.5 -mx-1 transition-colors ${active ? 'bg-white/5' : 'hover:bg-white/5'}`}
+    >
       <span className={`status-dot ${color} ${pulse ? 'pulse-red' : ''}`} />
       <span className="text-muted tracking-[0.15em]">{label}</span>
-    </div>
+    </button>
   );
 }
