@@ -2,6 +2,7 @@ node_modules/
 dist/
 client/dist/
 *.log
+logs/
 .DS_Store
 .env
 .vscode/

@@ -1,16 +1,17 @@
 # =============================================================================
 #  Trilogy Panel — one-shot installer for the lighting PC (Windows).
-#  Run from an elevated PowerShell:    .\setup.ps1
+#  Run via setup.bat (recommended) or:
+#    powershell -ExecutionPolicy Bypass -File .\setup.ps1
 #
 #  Performs:
-#    1. Sanity checks (admin, Node, npm)
-#    2. npm install for server + client
-#    3. Client build (creates client\dist for Express to serve)
-#    4. Global install of pm2 if missing
-#    5. pm2 start ecosystem.config.js  +  pm2 save
-#    6. Task Scheduler entries:
-#         a) "Trilogy PM2 Resurrect"  — at user logon, brings PM2 + server back
-#         b) "Trilogy Chrome Kiosk"   — at user logon, runs startup-chrome.bat
+#    1. Sanity checks (admin, Node, npm, Chrome, project build)
+#    2. npm install + client build
+#    3. PM2 install + start + save
+#    4. Task Scheduler (logon, with delays + retries):
+#         a) "Trilogy PM2 Resurrect"  — startup-pm2.bat
+#         b) "Trilogy Chrome Kiosk"   — startup-chrome.bat (waits for server)
+#    5. Kiosk-friendly Windows settings (power, screensaver, toasts)
+#    6. Smoke test against http://127.0.0.1:3000
 # =============================================================================
 
 $ErrorActionPreference = 'Stop'
@@ -33,10 +34,118 @@ function Need-Cmd($name) {
   }
 }
 
-Write-Host "==> Trilogy Panel setup — running in $root" -ForegroundColor Cyan
+function Resolve-ChromePath {
+  $candidates = @(
+    "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe",
+    "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+  )
+  foreach ($path in $candidates) {
+    if (Test-Path $path) { return $path }
+  }
+  return $null
+}
+
+function Resolve-Pm2Path {
+  if (Get-Command pm2 -ErrorAction SilentlyContinue) {
+    return (Get-Command pm2).Source
+  }
+  $npmPm2 = Join-Path $env:APPDATA 'npm\pm2.cmd'
+  if (Test-Path $npmPm2) { return $npmPm2 }
+  return $null
+}
+
+function Set-KioskPowerSettings {
+  Write-Host "==> Applying kiosk power settings (plugged in = never sleep)"
+  powercfg /change standby-timeout-ac 0 | Out-Null
+  powercfg /change monitor-timeout-ac 0 | Out-Null
+  powercfg /change hibernate-timeout-ac 0 | Out-Null
+  powercfg /change disk-timeout-ac 0 | Out-Null
+}
+
+function Set-KioskUserSettings {
+  Write-Host "==> Applying kiosk user settings (screensaver off, toasts off)"
+  Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name ScreenSaveActive -Value '0' -Force
+  Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name ScreenSaveTimeOut -Value '0' -Force
+  $pushPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications'
+  if (-not (Test-Path $pushPath)) {
+    New-Item -Path $pushPath -Force | Out-Null
+  }
+  Set-ItemProperty -Path $pushPath -Name ToastEnabled -Value 0 -Type DWord -Force
+}
+
+function Register-TrilogyScheduledTask {
+  param(
+    [string]$Name,
+    [string]$BatPath,
+    [int]$DelaySeconds,
+    [int]$RestartCount = 3
+  )
+
+  $action = New-ScheduledTaskAction -Execute $BatPath -WorkingDirectory $root
+  $trigger = New-ScheduledTaskTrigger -AtLogOn -Delay (New-TimeSpan -Seconds $DelaySeconds)
+  $settings = New-ScheduledTaskSettingsSet `
+    -AllowStartIfOnBatteries `
+    -DontStopIfGoingOnBatteries `
+    -StartWhenAvailable `
+    -RestartCount $RestartCount `
+    -RestartInterval (New-TimeSpan -Minutes 1) `
+    -MultipleInstances IgnoreNew `
+    -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+
+  $principal = New-ScheduledTaskPrincipal `
+    -UserId $env:USERNAME `
+    -LogonType Interactive `
+    -RunLevel Limited
+
+  Unregister-ScheduledTask -TaskName $Name -Confirm:$false -ErrorAction SilentlyContinue
+  Register-ScheduledTask `
+    -TaskName $Name `
+    -Action $action `
+    -Trigger $trigger `
+    -Settings $settings `
+    -Principal $principal `
+    -Description "Trilogy Panel auto-start ($Name)" | Out-Null
+
+  Write-Host "    Registered: $Name (logon + ${DelaySeconds}s delay, retries=$RestartCount)"
+}
+
+function Test-PanelServer {
+  param([int]$TimeoutSeconds = 30)
+  $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  while ((Get-Date) -lt $deadline) {
+    try {
+      $response = Invoke-WebRequest -Uri 'http://127.0.0.1:3000/' -UseBasicParsing -TimeoutSec 3
+      if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) {
+        return $true
+      }
+    }
+    catch {
+      # not ready yet
+    }
+    Start-Sleep -Seconds 2
+  }
+  return $false
+}
+
+# --- Main --------------------------------------------------------------------
+
+Write-Host "==> Trilogy Panel setup - running in $root" -ForegroundColor Cyan
 Require-Admin
 Need-Cmd 'node'
 Need-Cmd 'npm'
+
+$configPath = Join-Path $root 'config.json'
+if (-not (Test-Path $configPath)) {
+  Write-Error "config.json not found in $root"
+  exit 1
+}
+
+$chrome = Resolve-ChromePath
+if (-not $chrome) {
+  Write-Error "Google Chrome not found. Install Chrome before running setup."
+  exit 1
+}
+Write-Host "    Chrome: $chrome"
 
 Write-Host "==> Installing server dependencies"
 npm install --no-audit --no-fund
@@ -47,49 +156,74 @@ npm --prefix client install --no-audit --no-fund
 Write-Host "==> Building client bundle (client\dist)"
 npm --prefix client run build
 
+if (-not (Test-Path (Join-Path $root 'client\dist\index.html'))) {
+  Write-Error "Client build failed - client\dist\index.html not found."
+  exit 1
+}
+
 if (-not (Get-Command 'pm2' -ErrorAction SilentlyContinue)) {
   Write-Host "==> Installing pm2 globally"
   npm install -g pm2
 }
 
-Write-Host "==> Starting server under PM2"
-pm2 delete trilogy-panel 2>$null | Out-Null
-pm2 start "$root\ecosystem.config.js"
-pm2 save
+$pm2 = Resolve-Pm2Path
+if (-not $pm2) {
+  Write-Error "pm2 not found after install. Close and reopen PowerShell, then re-run setup.bat."
+  exit 1
+}
+Write-Host "    PM2: $pm2"
 
-# --- Scheduled task: PM2 resurrect at user logon -----------------------------
-$pm2Resurrect = "$env:APPDATA\npm\pm2.cmd"
-if (-not (Test-Path $pm2Resurrect)) {
-  # Fallback for newer npm prefix
-  $pm2Resurrect = (Get-Command pm2).Source
+Write-Host "==> Starting server under PM2"
+$ensureBat = Join-Path $root 'scripts\pm2-ensure-panel.bat'
+if (-not (Test-Path $ensureBat)) { Write-Error "Missing $ensureBat"; exit 1 }
+& $ensureBat restart
+if ($LASTEXITCODE -ne 0) {
+  Write-Error "Failed to start trilogy-panel under PM2. Check that Node and pm2 are installed."
+  exit 1
 }
 
-Write-Host "==> Registering Task Scheduler entry: 'Trilogy PM2 Resurrect'"
-$pm2Action  = New-ScheduledTaskAction  -Execute $pm2Resurrect -Argument "resurrect"
-$pm2Trigger = New-ScheduledTaskTrigger -AtLogOn
-$pm2Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-Unregister-ScheduledTask -TaskName "Trilogy PM2 Resurrect" -Confirm:$false -ErrorAction SilentlyContinue
-Register-ScheduledTask -TaskName "Trilogy PM2 Resurrect" `
-  -Action $pm2Action -Trigger $pm2Trigger -Settings $pm2Settings `
-  -RunLevel Highest -User $env:USERNAME | Out-Null
+$logsDir = Join-Path $root 'logs'
+if (-not (Test-Path $logsDir)) {
+  New-Item -ItemType Directory -Path $logsDir | Out-Null
+}
 
-# --- Scheduled task: Chrome kiosk at user logon (with delay built into .bat) -
-$kiosk = Join-Path $root 'startup-chrome.bat'
-Write-Host "==> Registering Task Scheduler entry: 'Trilogy Chrome Kiosk'"
-$chromeAction  = New-ScheduledTaskAction  -Execute $kiosk -WorkingDirectory $root
-$chromeTrigger = New-ScheduledTaskTrigger -AtLogOn
-Unregister-ScheduledTask -TaskName "Trilogy Chrome Kiosk" -Confirm:$false -ErrorAction SilentlyContinue
-Register-ScheduledTask -TaskName "Trilogy Chrome Kiosk" `
-  -Action $chromeAction -Trigger $chromeTrigger -Settings $pm2Settings `
-  -RunLevel Highest -User $env:USERNAME | Out-Null
+Write-Host "==> Registering Task Scheduler entries"
+$pm2Bat = Join-Path $root 'startup-pm2.bat'
+$kioskBat = Join-Path $root 'startup-chrome.bat'
+if (-not (Test-Path $pm2Bat)) { Write-Error "Missing $pm2Bat"; exit 1 }
+if (-not (Test-Path $kioskBat)) { Write-Error "Missing $kioskBat"; exit 1 }
+
+# Remove legacy / alternate kiosk tasks from older installs.
+Unregister-ScheduledTask -TaskName 'Trilogy Edge Kiosk' -Confirm:$false -ErrorAction SilentlyContinue
+
+Register-TrilogyScheduledTask -Name 'Trilogy PM2 Resurrect' -BatPath $pm2Bat -DelaySeconds 10 -RestartCount 5
+Register-TrilogyScheduledTask -Name 'Trilogy Chrome Kiosk' -BatPath $kioskBat -DelaySeconds 25 -RestartCount 3
+
+Set-KioskPowerSettings
+Set-KioskUserSettings
+
+Write-Host "==> Verifying panel server responds"
+if (Test-PanelServer -TimeoutSeconds 30) {
+  Write-Host "    Server OK at http://127.0.0.1:3000" -ForegroundColor Green
+}
+else {
+  Write-Warning "Server did not respond within 30s. Check: pm2 logs trilogy-panel"
+}
 
 Write-Host ""
 Write-Host "==> Done." -ForegroundColor Green
 Write-Host "    Server status:   pm2 status"
 Write-Host "    Server logs:     pm2 logs trilogy-panel"
-Write-Host "    Open panel now:  http://localhost:3000"
+Write-Host "    Startup logs:    $logsDir"
+Write-Host "    Open panel now:  http://127.0.0.1:3000"
 Write-Host ""
-Write-Host "    Reboot the PC once to verify the auto-start chain:"
-Write-Host "      1. grandMA2 onPC      (separate Task Scheduler entry you already manage)"
-Write-Host "      2. Trilogy PM2 Resurrect  (registered just now)"
-Write-Host "      3. Trilogy Chrome Kiosk   (registered just now, 60s grace built in)"
+Write-Host "    Reboot test (required before go-live):"
+Write-Host "      1. grandMA2 onPC starts (your existing Task Scheduler entry)"
+Write-Host "      2. ~10s after logon: Trilogy PM2 Resurrect (startup-pm2.bat)"
+Write-Host "      3. ~25s after logon: Trilogy Chrome Kiosk (startup-chrome.bat)"
+Write-Host ""
+Write-Host "    For a hands-off venue PC, also configure:"
+Write-Host "      - Windows auto-logon for the venue user (netplwiz)"
+Write-Host "      - Disable Windows Update auto-restart during show hours"
+Write-Host "      - Install this project to a fixed path (e.g. C:\trilogy-panel\)"
+Write-Host ""
