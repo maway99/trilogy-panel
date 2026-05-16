@@ -166,6 +166,11 @@ if (-not (Get-Command 'pm2' -ErrorAction SilentlyContinue)) {
   npm install -g pm2
 }
 
+# Refresh PATH in this session so pm2 is found immediately after global install.
+$npmBin = Join-Path $env:APPDATA 'npm'
+$nodeDir = Split-Path (Get-Command node).Source -Parent
+$env:Path = "$nodeDir;$npmBin;$env:Path"
+
 $pm2 = Resolve-Pm2Path
 if (-not $pm2) {
   Write-Error "pm2 not found after install. Close and reopen PowerShell, then re-run setup.bat."
@@ -176,9 +181,16 @@ Write-Host "    PM2: $pm2"
 Write-Host "==> Starting server under PM2"
 $ensureBat = Join-Path $root 'scripts\pm2-ensure-panel.bat'
 if (-not (Test-Path $ensureBat)) { Write-Error "Missing $ensureBat"; exit 1 }
-& $ensureBat restart
+$env:Path = "$nodeDir;$npmBin;$env:Path"
+cmd /c "`"$ensureBat`" restart"
 if ($LASTEXITCODE -ne 0) {
-  Write-Error "Failed to start trilogy-panel under PM2. Check that Node and pm2 are installed."
+  Write-Host ""
+  Write-Host "PM2 start failed. Common fixes:" -ForegroundColor Yellow
+  Write-Host "  1. Close this window, open a NEW admin PowerShell, run setup.bat again"
+  Write-Host "  2. Or manually:  cd `"$root`""
+  Write-Host "                 pm2 start ecosystem.config.cjs"
+  Write-Host "                 pm2 logs trilogy-panel"
+  Write-Error "Failed to start trilogy-panel under PM2."
   exit 1
 }
 

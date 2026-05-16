@@ -7,6 +7,7 @@ module.exports = {
     name: 'trilogy-panel',
     script: path.join(root, 'server.js'),
     cwd: root,
+    interpreter: 'node',
     watch: false,
     autorestart: true,
     restart_delay: 2000,

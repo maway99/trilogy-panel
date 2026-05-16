@@ -154,7 +154,7 @@ The **Status tab** in the panel itself is the primary diagnostic surface — con
 ```
 server.js              # Express + WS + MA2 telnet + Resolume HTTP
 config.json            # All venue-specific mappings + IPs + labels
-ecosystem.config.js    # PM2 process definition
+ecosystem.config.cjs   # PM2 process definition
 setup.bat              # First-time installer (run as admin)
 setup.ps1              # Installer logic (called by setup.bat)
 start-panel.bat        # Start/restart server only (new PC after Node installed)
