@@ -10,8 +10,8 @@ echo.>>"%LOG%"
 echo ==================================================>>"%LOG%"
 echo [%date% %time%] Chrome kiosk launcher>>"%LOG%"
 
-REM Grace for PM2 server + grandMA2 onPC (PM2 task also waits 10s at logon).
-timeout /t 25 /nobreak >nul
+REM Grace for PM2 server + grandMA2 onPC to come up.
+timeout /t 15 /nobreak >nul
 
 REM Wait for panel server (curl is built into Windows 11; no PowerShell required).
 set "TRIES=0"
@@ -31,9 +31,11 @@ goto :launch
 echo WARNING: Panel server not ready after 3 min - opening kiosk anyway>>"%LOG%"
 
 :launch
-REM Use a .ps1 helper file so batch does not mangle PowerShell syntax (e.g. $_.ProcessId).
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\close-trilogy-chrome.ps1" >>"%LOG%" 2>&1
-timeout /t 2 /nobreak >nul
+REM Close duplicate kiosk windows (optional; skip if helper missing).
+if exist "%~dp0scripts\close-trilogy-chrome.ps1" (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\close-trilogy-chrome.ps1" >>"%LOG%" 2>&1
+  timeout /t 1 /nobreak >nul
+)
 
 set "CHROME=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
 if not exist "%CHROME%" set "CHROME=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"

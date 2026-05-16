@@ -77,13 +77,11 @@ if not exist "%ROOT%\scripts\pm2-ensure-panel.bat" (
 )
 
 echo.
-echo [5/7] Start server under PM2
-call "%ROOT%\scripts\pm2-ensure-panel.bat" restart
+echo [5/7] Start panel server
+call "%ROOT%\scripts\start-panel-server.bat" setup
 if errorlevel 1 (
   echo.
-  echo PM2 start failed. Try manually:
-  echo   cd /d "%ROOT%"
-  echo   pm2 start ecosystem.config.cjs
+  echo Server failed to start. Check: logs\panel-server.log
   echo   pm2 logs trilogy-panel
   goto :fail
 )
@@ -102,6 +100,9 @@ call :RegisterTask "Trilogy PM2 Resurrect" "%ROOT%\startup-pm2.bat"
 if errorlevel 1 goto :fail
 call :RegisterTask "Trilogy Chrome Kiosk" "%ROOT%\startup-chrome.bat"
 if errorlevel 1 goto :fail
+
+call :InstallStartupShortcut "Trilogy-Panel-PM2.bat" "%ROOT%\startup-pm2.bat"
+call :InstallStartupShortcut "Trilogy-Panel-Kiosk.bat" "%ROOT%\startup-chrome.bat"
 
 echo.
 echo [7/7] Kiosk power / display settings
@@ -134,19 +135,33 @@ echo === Setup complete ===
 echo     pm2 status
 echo     pm2 logs trilogy-panel
 echo     Logs: %ROOT%\logs
+echo     troubleshoot-startup.bat  ^(if kiosk does not open at logon^)
 echo.
-echo Reboot once to test auto-start at logon.
+echo Opening Chrome kiosk now...
+call "%ROOT%\startup-chrome.bat"
+echo.
+echo After reboot, kiosk also starts via Startup folder + Task Scheduler.
 pause
 exit /b 0
 
 :RegisterTask
 schtasks /Delete /TN %~1 /F >nul 2>&1
-schtasks /Create /TN %~1 /TR "\"%~2\"" /SC ONLOGON /RU %RUNAS% /RL LIMITED /F
+schtasks /Create /TN %~1 /TR "%~2" /SC ONLOGON /RU %RUNAS% /RL LIMITED /F
 if errorlevel 1 (
   echo ERROR: schtasks failed for %~1
   exit /b 1
 )
-echo     Registered: %~1
+echo     Task Scheduler: %~1
+exit /b 0
+
+:InstallStartupShortcut
+set "STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
+set "SHORTCUT=%STARTUP%\%~1"
+(
+  echo @echo off
+  echo call "%~2"
+) > "%SHORTCUT%"
+echo     Startup folder: %~1
 exit /b 0
 
 :fail

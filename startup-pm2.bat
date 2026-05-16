@@ -8,18 +8,16 @@ set "LOG=%LOGDIR%\pm2-startup.log"
 
 echo.>>"%LOG%"
 echo ==================================================>>"%LOG%"
-echo [%date% %time%] PM2 startup>>"%LOG%"
+echo [%date% %time%] startup-pm2 at logon>>"%LOG%"
 
-REM Grace after logon (Task Scheduler delay not available on all PowerShell versions).
-timeout /t 10 /nobreak >nul
+REM Brief grace for Windows network stack.
+timeout /t 8 /nobreak >nul
 
-call "%~dp0scripts\pm2-ensure-panel.bat" >>"%LOG%" 2>&1
+call "%~dp0scripts\start-panel-server.bat" logon >>"%LOG%" 2>&1
 set "ERR=%errorlevel%"
 
-if "%ERR%"=="0" (
-  where pm2 >nul 2>&1 && pm2 status >>"%LOG%" 2>&1
-) else (
-  echo ERROR: pm2-ensure-panel failed with exit code %ERR%>>"%LOG%"
+if not "%ERR%"=="0" (
+  echo ERROR: panel server failed to start ^(exit %ERR%^)>>"%LOG%"
 )
 
 exit /b %ERR%

@@ -21,9 +21,11 @@ Panel talks to its own backend on `localhost:3000` via WebSocket. Backend talks 
 
 ## First-time install
 
-**Right-click `setup.bat` → Run as administrator**
+**Right-click `setup.bat` → Run as administrator** (run as the **same Windows user** that auto-logs in at the venue).
 
-`setup.bat` is the full installer (plain batch — no `setup.ps1` required). It installs dependencies, builds the client, starts PM2, registers Chrome kiosk in Task Scheduler, and applies kiosk power settings. Reboot once afterwards to verify auto-start.
+`setup.bat` is the full installer (plain batch). It installs dependencies, builds the client, starts PM2, registers auto-start (Task Scheduler **and** Startup folder), opens Chrome kiosk once at the end, then you reboot to confirm logon auto-start.
+
+If Chrome does not open after reboot: run `troubleshoot-startup.bat` and check `logs\kiosk-startup.log`.
 
 Prerequisites (install manually before running setup):
 
