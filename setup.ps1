@@ -73,6 +73,25 @@ function Set-KioskUserSettings {
   Set-ItemProperty -Path $pushPath -Name ToastEnabled -Value 0 -Type DWord -Force
 }
 
+function New-LogonTrigger {
+  param([int]$DelaySeconds = 0)
+
+  # -Delay on New-ScheduledTaskTrigger exists in PowerShell 7+ only.
+  # Windows PowerShell 5.1 (default on venue PCs) needs a CIM logon trigger instead.
+  $cmd = Get-Command New-ScheduledTaskTrigger -ErrorAction SilentlyContinue
+  if ($DelaySeconds -gt 0 -and $cmd -and 'Delay' -in $cmd.Parameters.Keys) {
+    return New-ScheduledTaskTrigger -AtLogOn -Delay (New-TimeSpan -Seconds $DelaySeconds)
+  }
+
+  $trigger = New-CimInstance -ClassName MSFT_TaskLogonTrigger `
+    -Namespace Root/Microsoft/Windows/TaskScheduler -ClientOnly
+  $trigger.Enabled = $true
+  if ($DelaySeconds -gt 0) {
+    $trigger.Delay = "PT${DelaySeconds}S"
+  }
+  return $trigger
+}
+
 function Register-TrilogyScheduledTask {
   param(
     [string]$Name,
@@ -82,15 +101,21 @@ function Register-TrilogyScheduledTask {
   )
 
   $action = New-ScheduledTaskAction -Execute $BatPath -WorkingDirectory $root
-  $trigger = New-ScheduledTaskTrigger -AtLogOn -Delay (New-TimeSpan -Seconds $DelaySeconds)
-  $settings = New-ScheduledTaskSettingsSet `
-    -AllowStartIfOnBatteries `
-    -DontStopIfGoingOnBatteries `
-    -StartWhenAvailable `
-    -RestartCount $RestartCount `
-    -RestartInterval (New-TimeSpan -Minutes 1) `
-    -MultipleInstances IgnoreNew `
-    -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+  $trigger = New-LogonTrigger -DelaySeconds $DelaySeconds
+
+  $settingsParams = @{
+    AllowStartIfOnBatteries    = $true
+    DontStopIfGoingOnBatteries = $true
+    StartWhenAvailable         = $true
+    RestartCount               = $RestartCount
+    RestartInterval            = (New-TimeSpan -Minutes 1)
+    ExecutionTimeLimit         = (New-TimeSpan -Hours 2)
+  }
+  $settingsCmd = Get-Command New-ScheduledTaskSettingsSet
+  if ('MultipleInstances' -in $settingsCmd.Parameters.Keys) {
+    $settingsParams.MultipleInstances = 'IgnoreNew'
+  }
+  $settings = New-ScheduledTaskSettingsSet @settingsParams
 
   $principal = New-ScheduledTaskPrincipal `
     -UserId $env:USERNAME `
@@ -106,7 +131,8 @@ function Register-TrilogyScheduledTask {
     -Principal $principal `
     -Description "Trilogy Panel auto-start ($Name)" | Out-Null
 
-  Write-Host "    Registered: $Name (logon + ${DelaySeconds}s delay, retries=$RestartCount)"
+  $delayNote = if ($DelaySeconds -gt 0) { "logon + ${DelaySeconds}s delay" } else { "logon" }
+  Write-Host "    Registered: $Name ($delayNote, retries=$RestartCount)"
 }
 
 function Test-PanelServer {

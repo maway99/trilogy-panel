@@ -10,6 +10,9 @@ echo.>>"%LOG%"
 echo ==================================================>>"%LOG%"
 echo [%date% %time%] PM2 startup>>"%LOG%"
 
+REM Grace after logon (Task Scheduler delay not available on all PowerShell versions).
+timeout /t 10 /nobreak >nul
+
 call "%~dp0scripts\pm2-ensure-panel.bat" >>"%LOG%" 2>&1
 set "ERR=%errorlevel%"
 
