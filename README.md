@@ -21,17 +21,9 @@ Panel talks to its own backend on `localhost:3000` via WebSocket. Backend talks 
 
 ## First-time install
 
-**Right-click `setup.bat` → Run as administrator** (do not double-click `setup.ps1` directly — Windows may block scripts).
+**Right-click `setup.bat` → Run as administrator**
 
-`setup.bat` runs the installer with PowerShell execution policy bypassed for this session only.
-
-This installs dependencies, builds the client, registers PM2 + Chrome kiosk in Task Scheduler, and saves the PM2 process list. Reboot once afterwards to verify the full auto-start chain.
-
-If you prefer PowerShell manually:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\setup.ps1
-```
+`setup.bat` is the full installer (plain batch — no `setup.ps1` required). It installs dependencies, builds the client, starts PM2, registers Chrome kiosk in Task Scheduler, and applies kiosk power settings. Reboot once afterwards to verify auto-start.
 
 Prerequisites (install manually before running setup):
 
