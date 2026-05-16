@@ -224,7 +224,7 @@ async function resolumeRequest(method, pathSuffix, body) {
   const init = {
     method,
     headers: { 'Content-Type': 'application/json' },
-    signal: AbortSignal.timeout(1500)
+    signal: AbortSignal.timeout(5000)
   };
   if (body !== undefined) init.body = JSON.stringify(body);
   const res = await fetch(url, init);
@@ -263,12 +263,17 @@ async function pollResolume() {
       state.resolume = 'disconnected';
       broadcastState();
     }
-  } catch {
+  } catch (err) {
     state.resolumeLastPollAt = Date.now();
+    state.resolumeLastStatus = err.cause?.code || err.message || 'fetch failed';
     if (state.resolume === 'connected') {
       state.resolume = 'disconnected';
       broadcastState();
     }
+    console.warn(
+      `[Resolume] Poll failed http://${config.resolume.ip}:${config.resolume.port}/api/v1/product:`,
+      state.resolumeLastStatus
+    );
   }
 }
 

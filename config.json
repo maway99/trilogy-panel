@@ -10,7 +10,7 @@
     "reconnectIntervalMs": 5000
   },
   "resolume": {
-    "ip": "192.168.3.6",
+    "ip": "2.0.0.30",
     "port": 8080,
     "pollIntervalMs": 2000,
     "videoSources": {
@@ -128,14 +128,14 @@
     "lasersSlow": {
       "label": "Lasers Slow",
       "cues": [
-        { "cue": 81,  "label": "Cue 81"  },
-        { "cue": 82,  "label": "Cue 82"  },
-        { "cue": 83,  "label": "Cue 83"  },
-        { "cue": 84,  "label": "Cue 84"  },
-        { "cue": 85,  "label": "Cue 85"  },
-        { "cue": 86,  "label": "Cue 86"  },
-        { "cue": 87,  "label": "Cue 87"  },
-        { "cue": 88,  "label": "Cue 88"  },
+        { "cue": 81,  "label": "Slow Wave White"  },
+        { "cue": 82,  "label": "Slow Wave Red"  },
+        { "cue": 83,  "label": "Slow Wave Blue"  },
+        { "cue": 84,  "label": "Slow Wave White 2"  },
+        { "cue": 85,  "label": "Slow Wave Red 2" },
+        { "cue": 86,  "label": "Slow Wave Blue 2"  },
+        { "cue": 87,  "label": "Slow Blue Dots"  },
+        { "cue": 88,  "label": "Slow Cyan Dots"  },
         { "cue": 89,  "label": "Cue 89"  },
         { "cue": 90,  "label": "Cue 90"  },
         { "cue": 91,  "label": "Cue 91"  },
@@ -153,8 +153,8 @@
     "lasersDrop": {
       "label": "Lasers Drop",
       "cues": [
-        { "cue": 101, "label": "Cue 101" },
-        { "cue": 102, "label": "Cue 102" },
+        { "cue": 101, "label": "Strobing White Dots" },
+        { "cue": 102, "label": "Strobing Green Dots" },
         { "cue": 103, "label": "Cue 103" },
         { "cue": 104, "label": "Cue 104" },
         { "cue": 105, "label": "Cue 105" },
