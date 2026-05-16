@@ -10,8 +10,8 @@ echo.>>"%LOG%"
 echo ==================================================>>"%LOG%"
 echo [%date% %time%] Chrome kiosk launcher>>"%LOG%"
 
-REM Short grace for Windows shell, network, and grandMA2 onPC to start.
-timeout /t 15 /nobreak >nul
+REM Grace for PM2 server + grandMA2 onPC (PM2 task also waits 10s at logon).
+timeout /t 25 /nobreak >nul
 
 REM Wait for panel server (curl is built into Windows 11; no PowerShell required).
 set "TRIES=0"

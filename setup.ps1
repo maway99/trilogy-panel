@@ -73,66 +73,35 @@ function Set-KioskUserSettings {
   Set-ItemProperty -Path $pushPath -Name ToastEnabled -Value 0 -Type DWord -Force
 }
 
-function New-LogonTrigger {
-  param([int]$DelaySeconds = 0)
-
-  # -Delay on New-ScheduledTaskTrigger exists in PowerShell 7+ only.
-  # Windows PowerShell 5.1 (default on venue PCs) needs a CIM logon trigger instead.
-  $cmd = Get-Command New-ScheduledTaskTrigger -ErrorAction SilentlyContinue
-  if ($DelaySeconds -gt 0 -and $cmd -and 'Delay' -in $cmd.Parameters.Keys) {
-    return New-ScheduledTaskTrigger -AtLogOn -Delay (New-TimeSpan -Seconds $DelaySeconds)
-  }
-
-  $trigger = New-CimInstance -ClassName MSFT_TaskLogonTrigger `
-    -Namespace Root/Microsoft/Windows/TaskScheduler -ClientOnly
-  $trigger.Enabled = $true
-  if ($DelaySeconds -gt 0) {
-    $trigger.Delay = "PT${DelaySeconds}S"
-  }
-  return $trigger
-}
-
 function Register-TrilogyScheduledTask {
   param(
     [string]$Name,
-    [string]$BatPath,
-    [int]$DelaySeconds,
-    [int]$RestartCount = 3
+    [string]$BatPath
   )
 
-  $action = New-ScheduledTaskAction -Execute $BatPath -WorkingDirectory $root
-  $trigger = New-LogonTrigger -DelaySeconds $DelaySeconds
-
-  $settingsParams = @{
-    AllowStartIfOnBatteries    = $true
-    DontStopIfGoingOnBatteries = $true
-    StartWhenAvailable         = $true
-    RestartCount               = $RestartCount
-    RestartInterval            = (New-TimeSpan -Minutes 1)
-    ExecutionTimeLimit         = (New-TimeSpan -Hours 2)
+  # schtasks.exe works on all Windows 10/11 builds with PowerShell 5.1.
+  # Avoid New-ScheduledTaskTrigger / CIM APIs (missing -Delay, Enabled, etc.).
+  if (-not (Test-Path $BatPath)) {
+    Write-Error "Batch file not found: $BatPath"
+    exit 1
   }
-  $settingsCmd = Get-Command New-ScheduledTaskSettingsSet
-  if ('MultipleInstances' -in $settingsCmd.Parameters.Keys) {
-    $settingsParams.MultipleInstances = 'IgnoreNew'
+
+  $batFull = (Resolve-Path $BatPath).Path
+  $runAs = $env:USERNAME
+  if ($env:USERDOMAIN -and $env:USERDOMAIN -ne $env:COMPUTERNAME) {
+    $runAs = "$env:USERDOMAIN\$env:USERNAME"
   }
-  $settings = New-ScheduledTaskSettingsSet @settingsParams
 
-  $principal = New-ScheduledTaskPrincipal `
-    -UserId $env:USERNAME `
-    -LogonType Interactive `
-    -RunLevel Limited
+  schtasks /Delete /TN $Name /F 2>$null | Out-Null
 
-  Unregister-ScheduledTask -TaskName $Name -Confirm:$false -ErrorAction SilentlyContinue
-  Register-ScheduledTask `
-    -TaskName $Name `
-    -Action $action `
-    -Trigger $trigger `
-    -Settings $settings `
-    -Principal $principal `
-    -Description "Trilogy Panel auto-start ($Name)" | Out-Null
+  $output = schtasks /Create /TN $Name /TR "`"$batFull`"" /SC ONLOGON /RU $runAs /RL LIMITED /F 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host $output
+    Write-Error "schtasks failed to create '$Name' (exit $LASTEXITCODE)"
+    exit 1
+  }
 
-  $delayNote = if ($DelaySeconds -gt 0) { "logon + ${DelaySeconds}s delay" } else { "logon" }
-  Write-Host "    Registered: $Name ($delayNote, retries=$RestartCount)"
+  Write-Host "    Registered: $Name (at logon for $runAs)"
 }
 
 function Test-PanelServer {
@@ -231,11 +200,11 @@ $kioskBat = Join-Path $root 'startup-chrome.bat'
 if (-not (Test-Path $pm2Bat)) { Write-Error "Missing $pm2Bat"; exit 1 }
 if (-not (Test-Path $kioskBat)) { Write-Error "Missing $kioskBat"; exit 1 }
 
-# Remove legacy / alternate kiosk tasks from older installs.
-Unregister-ScheduledTask -TaskName 'Trilogy Edge Kiosk' -Confirm:$false -ErrorAction SilentlyContinue
+# Remove legacy tasks from older installs.
+schtasks /Delete /TN 'Trilogy Edge Kiosk' /F 2>$null | Out-Null
 
-Register-TrilogyScheduledTask -Name 'Trilogy PM2 Resurrect' -BatPath $pm2Bat -DelaySeconds 10 -RestartCount 5
-Register-TrilogyScheduledTask -Name 'Trilogy Chrome Kiosk' -BatPath $kioskBat -DelaySeconds 25 -RestartCount 3
+Register-TrilogyScheduledTask -Name 'Trilogy PM2 Resurrect' -BatPath $pm2Bat
+Register-TrilogyScheduledTask -Name 'Trilogy Chrome Kiosk' -BatPath $kioskBat
 
 Set-KioskPowerSettings
 Set-KioskUserSettings
@@ -257,8 +226,8 @@ Write-Host "    Open panel now:  http://127.0.0.1:3000"
 Write-Host ""
 Write-Host "    Reboot test (required before go-live):"
 Write-Host "      1. grandMA2 onPC starts (your existing Task Scheduler entry)"
-Write-Host "      2. ~10s after logon: Trilogy PM2 Resurrect (startup-pm2.bat)"
-Write-Host "      3. ~25s after logon: Trilogy Chrome Kiosk (startup-chrome.bat)"
+Write-Host "      2. At logon: Trilogy PM2 Resurrect (waits 10s, then starts server)"
+Write-Host "      3. At logon: Trilogy Chrome Kiosk (waits for server, then opens Chrome)"
 Write-Host ""
 Write-Host "    For a hands-off venue PC, also configure:"
 Write-Host "      - Windows auto-logon for the venue user (netplwiz)"
