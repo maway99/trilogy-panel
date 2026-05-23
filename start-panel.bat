@@ -18,12 +18,20 @@ echo [%date% %time%] start-panel>>"%LOG%"
 REM -----------------------------------------------------------------------
 REM 1. Launch grandMA2 onPC (if not already running)
 REM -----------------------------------------------------------------------
-set "GMA2=%ProgramFiles%\MA Lighting Technologies\grandma\grandMA2\gma2onpc.exe"
-if not exist "%GMA2%" set "GMA2=%ProgramFiles(x86)%\MA Lighting Technologies\grandma\grandMA2\gma2onpc.exe"
+REM Search for gma2onpc.exe under the versioned install folder (e.g. "grandMA2 onPC 3.9.61.5").
+set "GMA2="
+for /d %%D in ("%ProgramFiles%\MA Lighting Technologies\grandma\grandMA2 onPC*") do (
+    if exist "%%D\gma2onpc.exe" set "GMA2=%%D\gma2onpc.exe"
+)
+if not defined GMA2 (
+    for /d %%D in ("%ProgramFiles(x86)%\MA Lighting Technologies\grandma\grandMA2 onPC*") do (
+        if exist "%%D\gma2onpc.exe" set "GMA2=%%D\gma2onpc.exe"
+    )
+)
 
 echo [1/3] grandMA2 onPC...
-if not exist "%GMA2%" (
-    echo       Not found in Program Files or Program Files (x86^) - skipping
+if not defined GMA2 (
+    echo       Not found under Program Files - skipping
     echo [1/3] gma2onpc not found - skipping>>"%LOG%"
     goto :start_server
 )
