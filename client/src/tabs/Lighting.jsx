@@ -13,6 +13,39 @@ const TOP_ROW_HEIGHT = 120;
 const CONFETTI_WIDTH = 240;
 const VISIBLE_CUES_PER_BANK = 15;
 
+const COLOR_ORDER = ['white', 'red', 'orange', 'magenta', 'blue', 'purple', 'cyan', 'green', 'neutral'];
+
+const COLOR_HEX = {
+  white:   '#a0a0a0',
+  red:     '#ef4444',
+  orange:  '#f97316',
+  magenta: '#d946ef',
+  blue:    '#3b82f6',
+  purple:  '#8b5cf6',
+  cyan:    '#22d3ee',
+  green:   '#22c55e',
+  neutral: null,
+};
+
+function detectColor(label) {
+  const checks = [
+    { re: /\bwhites?\b/i, color: 'white' },
+    { re: /\breds?\b/i,   color: 'red'   },
+    { re: /\boranges?\b/i, color: 'orange' },
+    { re: /\bmagentas?\b/i, color: 'magenta' },
+    { re: /\bblues?\b/i,  color: 'blue'  },
+    { re: /\bpurples?\b/i, color: 'purple' },
+    { re: /\bcyans?\b/i,  color: 'cyan'  },
+    { re: /\bgreens?\b/i, color: 'green' },
+  ];
+  let earliest = Infinity, result = 'neutral';
+  for (const { re, color } of checks) {
+    const m = re.exec(label);
+    if (m && m.index < earliest) { earliest = m.index; result = color; }
+  }
+  return result;
+}
+
 function pickRandom(cues, exclude) {
   const pool = exclude != null ? cues.filter(c => c.cue !== exclude) : cues;
   return pool[Math.floor(Math.random() * pool.length)];
@@ -240,35 +273,47 @@ function GroupDivider() {
 function BankColumn({ bankKey, bank, activeCue, onSelect, autoNextCue }) {
   const isStrobe = bankKey === 'strobingCues';
   const filtered = bank.cues.filter((c) => c.label !== `Cue ${c.cue}`);
-  const visible = filtered.slice(0, VISIBLE_CUES_PER_BANK);
+  const sorted = filtered
+    .slice(0, VISIBLE_CUES_PER_BANK)
+    .sort((a, b) => COLOR_ORDER.indexOf(detectColor(a.label)) - COLOR_ORDER.indexOf(detectColor(b.label)));
+
   return (
     <div className="flex-1 flex flex-col min-h-0 min-w-0">
       <div className="section-header mb-2 text-center truncate">{bank.label}</div>
-      <div
-        className="grid gap-1 flex-1 min-h-0"
-        style={{ gridTemplateRows: `repeat(${VISIBLE_CUES_PER_BANK}, minmax(0, 1fr))` }}
-      >
-        {visible.map((c) => {
+      <div className="flex-1 flex flex-col gap-1 min-h-0">
+        {sorted.map((c, i) => {
           const isActive = activeCue === c.cue;
           const isNext = autoNextCue === c.cue;
+          const color = detectColor(c.label);
+          const hex = COLOR_HEX[color];
+          const showDivider = i > 0 && detectColor(sorted[i - 1].label) !== color;
           return (
-            <button
-              key={c.cue}
-              onClick={() => onSelect(c.cue)}
-              className={`btn relative text-[13px] font-medium overflow-hidden flex items-center justify-center px-2 ${
-                isActive
-                  ? `btn-active ${isStrobe ? 'border-2 border-amber' : ''}`
-                  : isNext
-                  ? 'btn-default border border-amber/50'
-                  : 'btn-default'
-              }`}
-              style={{ minHeight: 0 }}
-            >
-              <span className="absolute top-1 right-1.5 text-[9px] leading-none tabular-nums opacity-50">
-                {c.cue}
-              </span>
-              <span className="truncate">{c.label}</span>
-            </button>
+            <React.Fragment key={c.cue}>
+              {showDivider && <div className="h-px bg-border/50 flex-none" />}
+              <button
+                onClick={() => onSelect(c.cue)}
+                className={`btn relative flex-1 text-[13px] font-medium overflow-hidden flex items-center justify-center px-2 ${
+                  isActive
+                    ? `btn-active ${isStrobe ? 'border-2 border-amber' : ''}`
+                    : isNext
+                    ? 'btn-default border border-amber/50'
+                    : 'btn-default'
+                }`}
+                style={{ minHeight: 0 }}
+              >
+                {hex && (
+                  <span
+                    className="absolute left-0 top-0 bottom-0 w-[3px]"
+                    style={{ background: isActive ? 'rgba(0,0,0,0.25)' : hex }}
+                    aria-hidden="true"
+                  />
+                )}
+                <span className="absolute top-1 right-1.5 text-[9px] leading-none tabular-nums opacity-50">
+                  {c.cue}
+                </span>
+                <span className="truncate">{c.label}</span>
+              </button>
+            </React.Fragment>
           );
         })}
       </div>
