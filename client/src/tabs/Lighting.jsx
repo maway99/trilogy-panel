@@ -280,40 +280,44 @@ function BankColumn({ bankKey, bank, activeCue, onSelect, autoNextCue }) {
   return (
     <div className="flex-1 flex flex-col min-h-0 min-w-0">
       <div className="section-header mb-2 text-center truncate">{bank.label}</div>
-      <div className="flex-1 flex flex-col gap-1 min-h-0">
+      <div
+        className="grid gap-1 flex-1 min-h-0"
+        style={{ gridTemplateRows: `repeat(${VISIBLE_CUES_PER_BANK}, minmax(0, 1fr))` }}
+      >
         {sorted.map((c, i) => {
           const isActive = activeCue === c.cue;
           const isNext = autoNextCue === c.cue;
           const color = detectColor(c.label);
           const hex = COLOR_HEX[color];
-          const showDivider = i > 0 && detectColor(sorted[i - 1].label) !== color;
+          const isGroupStart = i > 0 && detectColor(sorted[i - 1].label) !== color;
           return (
-            <React.Fragment key={c.cue}>
-              {showDivider && <div className="h-px bg-border/50 flex-none" />}
-              <button
-                onClick={() => onSelect(c.cue)}
-                className={`btn relative flex-1 text-[13px] font-medium overflow-hidden flex items-center justify-center px-2 ${
-                  isActive
-                    ? `btn-active ${isStrobe ? 'border-2 border-amber' : ''}`
-                    : isNext
-                    ? 'btn-default border border-amber/50'
-                    : 'btn-default'
-                }`}
-                style={{ minHeight: 0 }}
-              >
-                {hex && (
-                  <span
-                    className="absolute left-0 top-0 bottom-0 w-[3px]"
-                    style={{ background: isActive ? 'rgba(0,0,0,0.25)' : hex }}
-                    aria-hidden="true"
-                  />
-                )}
-                <span className="absolute top-1 right-1.5 text-[9px] leading-none tabular-nums opacity-50">
-                  {c.cue}
-                </span>
-                <span className="truncate">{c.label}</span>
-              </button>
-            </React.Fragment>
+            <button
+              key={c.cue}
+              onClick={() => onSelect(c.cue)}
+              className={`btn relative text-[13px] font-medium overflow-hidden flex items-center justify-center px-2 ${
+                isActive
+                  ? `btn-active ${isStrobe ? 'border-2 border-amber' : ''}`
+                  : isNext
+                  ? 'btn-default border border-amber/50'
+                  : 'btn-default'
+              }`}
+              style={{
+                minHeight: 0,
+                ...(isGroupStart && !isActive && !isNext ? { borderTopColor: 'rgba(255,255,255,0.25)' } : {}),
+              }}
+            >
+              {hex && (
+                <span
+                  className="absolute left-0 top-0 bottom-0 w-[3px]"
+                  style={{ background: isActive ? 'rgba(0,0,0,0.25)' : hex }}
+                  aria-hidden="true"
+                />
+              )}
+              <span className="absolute top-1 right-1.5 text-[9px] leading-none tabular-nums opacity-50">
+                {c.cue}
+              </span>
+              <span className="truncate">{c.label}</span>
+            </button>
           );
         })}
       </div>
